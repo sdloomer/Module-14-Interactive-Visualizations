@@ -1,93 +1,78 @@
 const url = "https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json"
 
+// Create fetch for json data
 d3.json(url).then(function(data) {
     console.log(data)
 });
 
-function init() {
-    let dropdownMenu = d3.select("#selDataset");
-    d3.json(url).then((data) => {
-        let names = data.names;
-        names.forEach((id) => {
-            console.log(id);
-            dropdownMenu.append("option").text(id).property("value", id);
-        });
-        let first_sample = names[0];
-        console.log(first_sample);
-        metadata(first_sample);
-        barChart(first_sample);
-        bubbleChart(first_sample);
-    });
-};
+// Log all data
+d3.json(url).then(data => {
+    nameData = data.names;
+    metaData = data.metadata;
+    sampleData = data.samples;
 
-function metadata(sample) {
-    d3.json(url).then((data) => {
-        let metadata = data.metadata;
-        let value = metadata.filter(result => result.id == sample);
-        console.log(value)
-        let dataValue = value[0];
-        d3.select("#sample-metadata").html("");
-        Object.entries(dataValue).forEach(([key, value]) => {
-            console.log(key, value);
-            d3.select("#sample-metadata").append("h5").text(`${key}: ${value}`);
-        });
-    });
-};
+    // Create charts with the first subject's data
+    metadata(0);
+    barChart(0);
+    bubbleChart(0);
+    
+    // Create dropdown menu with subject IDs
+    d3.select("#selDataset").selectAll("option").data(nameData).enter().append("option").text(name => name).property("value", name => name);
 
+    function metadata(sample) {
+        const metadataValues = metaData[sample];
+        const panelBody = d3.select("#sample-metadata");
+        panelBody.html("");
+        Object.entries(metadataValues).forEach(([key, value]) => {panelBody.append("p").text(`${key}: ${value}`);
+        });
+    }
+});
+
+// Create function for bar chart
 function barChart(sample) {
     d3.json(url).then((data) => {
-        let sampleData = data.samples;
-        let value = sampleData.filter(result => result.id == sample);
-        let dataValue = value[0];
-        let otu_ids = dataValue.otu_ids;
-        let otu_labels = dataValue.otu_labels;
-        let sample_values = dataValue.sample_values;
-        console.log(otu_ids, otu_labels, sample_values);
-        
-        let xticks = sample_values.slice(0, 10).reverse();
-        let yticks = otu_ids.slice(0, 10).map(id => `OTU ${id}`).reverse();
-        let labels = otu_labels.slice(0, 10).reverse();
+        const sampleValues = sampleData[sample].sample_values.slice(0, 10).reverse();
+        const otuIDs = sampleData[sample].otu_ids.map(id => `OTU ${id}`).reverse();
+        const otuLabels = sampleData[sample].otu_labels.slice(0, 10).reverse();
 
         let trace = {
-            x: xticks,
-            y: yticks,
-            text: labels,
+            x: sampleValues,
+            y: otuIDs,
+            text: otuLabels,
             type: "bar",
             orientation: "h"
         };
 
         let layout = {
-            title: "Top Ten OTUs"
+            title: "Top Ten OTUs",
+            x_axis: "Sample Values"
         };
 
         Plotly.newPlot("bar", [trace], layout)
     });
 };
 
+// Create function for bubble chart
 function bubbleChart(sample) {
     d3.json(url).then((data) => {
-        let sampleData = data.samples;
-        let value = sampleData.filter(result => result.id == sample);
-        let dataValue = value[0];
-        let otu_ids = dataValue.otu_ids;
-        let otu_labels = dataValue.otu_labels;
-        let sample_values = dataValue.sample_values;
-        console.log(otu_ids, otu_labels, sample_values);
+        const sampleValues = sampleData[sample].sample_values;
+        const otuIDs = sampleData[sample].otu_ids;
+        const otuLabels = sampleData[sample].otu_labels;
 
-        let trace2 = {
-            x: otu_ids,
-            y: sample_values,
-            text: otu_labels,
+        const trace2 = {
+            x: otuIDs,
+            y: sampleValues,
+            text: otuLabels,
             mode: "markers",
             marker: {
-                size: sample_values,
-                color: otu_ids,
+                size: sampleValues,
+                color: otuIDs,
                 colorscale: "Earth"
             }
         };
 
-        let layout = {
-            x_axis: "OTU ID",
+        const layout = {
+            x_axis: "OTU IDs",
             title: "Bacteria In Each Sample",
             hovermode: "closest"
         };
@@ -96,16 +81,14 @@ function bubbleChart(sample) {
     });
 };
 
-function changeSampleData(value) { 
+// Call function updateCharts whenever a change happens to DOM
+d3.selectAll("#selDataset").on("change", barChart);
 
-    // Log the new value
-    console.log(value); 
-
-    // Call all functions 
-    metadata(value);
-    barChart(value);
-    bubbleChart(value);
-    // buildGaugeChart(value);
+// New function called when dropdown item is selected
+function optionChanged() { 
+    let dropdownMenuNew = d3.select("#selDataset");
+    let newDataSet = dropdownMenuNew.property("value");
 };
 
-init();
+// Event listener for dropdown
+d3.select("#selDataset").on("change", optionChanged)
